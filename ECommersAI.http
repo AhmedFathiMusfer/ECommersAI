@@ -1,0 +1,17 @@
+@ECommersAI_HostAddress = http://localhost:5123
+
+GET {{ECommersAI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+POST {{ECommersAI_HostAddress}}/api/ai/chat
+Content-Type: application/json
+
+{
+	"traderId": "00000000-0000-0000-0000-000000000001",
+	"customerPhone": "+967700000001",
+	"message": "ابحث لي عن قميص قطني مناسب"
+}
+
+###
