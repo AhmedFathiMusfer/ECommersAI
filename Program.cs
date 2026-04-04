@@ -22,8 +22,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection("Gemini"));
+builder.Services.Configure<ChatAIOptions>(builder.Configuration.GetSection("ChatAI"));
+builder.Services.Configure<EmbeddingAIOption>(builder.Configuration.GetSection("EmbeddingAI"));
+
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection("WhatsApp"));
+
 
 builder.Services.AddScoped<IRepository<Trader>, TraderRepository>();
 builder.Services.AddScoped<IRepository<Product>, ProductRepository>();
@@ -41,13 +44,13 @@ builder.Services.AddScoped<IExchangeRateService, ExchangeRateService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
-builder.Services.AddScoped<IAgentService, AIService>();
+builder.Services.AddScoped<IChatAIService, ChatAIService>();
 builder.Services.AddScoped<InventoryPlugin>();
 builder.Services.AddScoped<PricingPlugin>();
-builder.Services.AddScoped<IAIService, GeminiService>();
+builder.Services.AddScoped<IAIService, EmbeddingService>();
 builder.Services.AddScoped<AutoGenerateOrderAction>();
-builder.Services.AddHttpClient<IAIService, GeminiService>();
-//builder.Services.AddHttpClient<IAgentService, AIService>();
+builder.Services.AddHttpClient<IAIService, EmbeddingService>();
+//builder.Services.AddHttpClient<IAgentService, ChatAIService>();
 
 
 builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
@@ -58,7 +61,10 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+});
 }
 
 app.UseHttpsRedirection();

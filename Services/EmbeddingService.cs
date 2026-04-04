@@ -14,15 +14,18 @@ using Microsoft.Extensions.Options;
 
 namespace ECommersAI.Services
 {
-    public class GeminiService : IAIService
+    public class EmbeddingService : IAIService
     {
         private readonly HttpClient _httpClient;
-        private readonly GeminiOptions _options;
+        private readonly EmbeddingAIOption _options;
 
-        public GeminiService(HttpClient httpClient, IOptions<GeminiOptions> options)
+        private readonly ILogger<EmbeddingService> _logger;
+
+        public EmbeddingService(HttpClient httpClient, IOptions<EmbeddingAIOption> options, ILogger<EmbeddingService> logger)
         {
             _httpClient = httpClient;
             _options = options.Value;
+            _logger = logger;
         }
 
         public Task<string> TranscribeVoiceAsync(string mediaUrl)
@@ -38,37 +41,47 @@ namespace ECommersAI.Services
 
         public async Task<float[]> GenerateEmbeddingAsync(string text)
         {
-            // if (string.IsNullOrWhiteSpace(_options.ApiKey))
-            // {
-            return BuildDeterministicEmbedding(text, _options.EmbeddingDimensions > 0 ? _options.EmbeddingDimensions : 1536);
-            //  }
-
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{_options.BaseUrl.TrimEnd('/')}/embeddings")
+            try
             {
-                Content = JsonContent.Create(new
+                if (string.IsNullOrWhiteSpace(_options.ApiKey))
                 {
-                    input = text,
-                    model = _options.EmbeddingModel,
-                    dimensions = _options.EmbeddingDimensions
-                })
-            };
+                    return BuildDeterministicEmbedding(text, _options.Dimensions > 0 ? _options.Dimensions : 1536);
+                }
 
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
-            using var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+                using var request = new HttpRequestMessage(HttpMethod.Post, _options.BaseUrl)
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        input = text,
+                        model = _options.Model,
+                        dimensions = _options.Dimensions
+                    })
+                };
 
-            using var stream = await response.Content.ReadAsStreamAsync();
-            using var json = await JsonDocument.ParseAsync(stream);
-            var embeddingArray = json.RootElement.GetProperty("data")[0].GetProperty("embedding");
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+                using var response = await _httpClient.SendAsync(request);
+                response.EnsureSuccessStatusCode();
 
-            var result = new float[embeddingArray.GetArrayLength()];
-            var index = 0;
-            foreach (var value in embeddingArray.EnumerateArray())
+                using var stream = await response.Content.ReadAsStreamAsync();
+                using var json = await JsonDocument.ParseAsync(stream);
+                var embeddingArray = json.RootElement.GetProperty("data")[0].GetProperty("embedding");
+
+                var result = new float[embeddingArray.GetArrayLength()];
+                var index = 0;
+                foreach (var value in embeddingArray.EnumerateArray())
+                {
+                    result[index++] = value.GetSingle();
+                }
+                return result;
+            }
+            catch (Exception ex)
             {
-                result[index++] = value.GetSingle();
+                // Log the exception as needed. For now, we just return a deterministic embedding.
+                _logger.LogError(ex, "Error generating embedding for text: {Text}", text);
+                return BuildDeterministicEmbedding(text, _options.Dimensions > 0 ? _options.Dimensions : 1536);
             }
 
-            return result;
+
         }
 
         public async Task<string> GenerateReplyAsync(string prompt, IEnumerable<string> productHints)

@@ -1,10 +1,9 @@
-using System.Threading;
-using System.Threading.Tasks;
+
 using ECommersAI.DTOs.AI;
 
 namespace ECommersAI.Services.Interfaces
 {
-    public interface IAgentService
+    public interface IChatAIService
     {
         Task<string> ChatAsync(ChatRequestDto request, CancellationToken cancellationToken = default);
     }

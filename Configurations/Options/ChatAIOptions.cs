@@ -1,6 +1,6 @@
 namespace ECommersAI.Configurations.Options
 {
-    public class GeminiOptions
+    public class ChatAIOptions
     {
         public string ApiKey { get; set; } = string.Empty;
         public string Model { get; set; } = "gemini-2.0-flash";

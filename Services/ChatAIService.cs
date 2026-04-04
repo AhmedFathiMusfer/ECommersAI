@@ -19,7 +19,7 @@ using OpenAI;
 
 namespace ECommersAI.Services
 {
-    public class AIService : IAgentService
+    public class ChatAIService : IChatAIService
     {
         private const string SystemPrompt = """
 You are a smart Yemeni e-commerce assistant.
@@ -32,22 +32,22 @@ Rules:
 - If user refers to previous product, maintain context.
 """;
 
-        private readonly GeminiOptions _geminiOptions;
+        private readonly ChatAIOptions _chatAiOptions;
         private readonly InventoryPlugin _inventoryPlugin;
         private readonly PricingPlugin _pricingPlugin;
         private readonly ApplicationDbContext _dbContext;
-        private readonly ILogger<AIService> _logger;
+        private readonly ILogger<ChatAIService> _logger;
 
 
-        public AIService(
-            IOptions<GeminiOptions> geminiOptions,
+        public ChatAIService(
+            IOptions<ChatAIOptions> chatAiOptions,
             InventoryPlugin inventoryPlugin,
             PricingPlugin pricingPlugin,
             ApplicationDbContext dbContext,
-            ILogger<AIService> logger
+            ILogger<ChatAIService> logger
 )
         {
-            _geminiOptions = geminiOptions.Value;
+            _chatAiOptions = chatAiOptions.Value;
             _inventoryPlugin = inventoryPlugin;
             _pricingPlugin = pricingPlugin;
             _dbContext = dbContext;
@@ -62,7 +62,7 @@ Rules:
                 return "يرجى كتابة رسالتك أولا.";
             }
 
-            if (string.IsNullOrWhiteSpace(_geminiOptions.ApiKey))
+            if (string.IsNullOrWhiteSpace(_chatAiOptions.ApiKey))
             {
                 return "خدمة الذكاء الاصطناعي غير مفعلة حاليا بسبب إعدادات المفتاح.";
             }
@@ -108,13 +108,13 @@ Rules:
 
             var opnAIOption = new OpenAIClientOptions()
             {
-                Endpoint = new Uri(_geminiOptions.BaseUrl),
+                Endpoint = new Uri(_chatAiOptions.BaseUrl),
             };
-            var credentials = new ApiKeyCredential(_geminiOptions.ApiKey);
+            var credentials = new ApiKeyCredential(_chatAiOptions.ApiKey);
             var ghModelsClinet = new OpenAIClient(credentials, opnAIOption);
 
             builder.AddOpenAIChatCompletion(
-            _geminiOptions.Model,
+            _chatAiOptions.Model,
              ghModelsClinet
                );
 

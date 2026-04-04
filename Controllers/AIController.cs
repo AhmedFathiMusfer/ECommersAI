@@ -11,12 +11,12 @@ namespace ECommersAI.Controllers
     [Route("api/ai")]
     public class AIController : ControllerBase
     {
-        private readonly IAgentService _agentService;
+        private readonly IChatAIService _agentService;
         private readonly IMessageService _messageService;
         private readonly ILogger<AIController> _logger;
 
         public AIController(
-            IAgentService agentService,
+            IChatAIService agentService,
             IMessageService messageService,
             ILogger<AIController> logger)
         {
