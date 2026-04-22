@@ -11,6 +11,7 @@ namespace ECommersAI.Services.Interfaces
         Task<bool> UpdateAsync(Guid id, UpdateProductRequest request);
         Task<bool> DeleteAsync(Guid id);
         Task<List<ProductSearchResultDto>> SearchByQueryAsync(Guid traderId, string query, string currency, int topK = 5);
+        Task<List<ProductSearchResultDto>> SearchByVectorQueryAsync(Guid traderId, string query, int topK = 5);
         Task UpsertProductVectorAsync(Guid productId);
     }
 }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ECommersAI.DTOs.Product;
 using ECommersAI.Models.Entities;
 using ECommersAI.Repositories;
+using ECommersAI.Repositories.interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ECommersAI.Controllers
@@ -13,9 +14,9 @@ namespace ECommersAI.Controllers
     [Route("product-attributes")]
     public class ProductAttributesController : ControllerBase
     {
-        private readonly IRepository<ProductAttribute> _productAttributeRepository;
+        private readonly IProductAttributeRepository _productAttributeRepository;
 
-        public ProductAttributesController(IRepository<ProductAttribute> productAttributeRepository)
+        public ProductAttributesController(IProductAttributeRepository productAttributeRepository)
         {
             _productAttributeRepository = productAttributeRepository;
         }

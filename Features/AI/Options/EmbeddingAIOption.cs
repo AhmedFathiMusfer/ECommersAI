@@ -1,4 +1,4 @@
-namespace ECommersAI.Configurations.Options
+namespace ECommersAI.Features.AI.Options
 {
     public class EmbeddingAIOption
     {

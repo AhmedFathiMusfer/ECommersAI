@@ -1,25 +1,21 @@
-
-using ECommersAI.Configurations.Options;
 using ECommersAI.Data;
 using ECommersAI.DTOs.AI;
+using ECommersAI.Features.AI.DTOs;
+using ECommersAI.Features.AI.Options;
+using ECommersAI.Features.AI.Plugins;
 using ECommersAI.Services.Interfaces;
-using ECommersAI.Services.Plugins;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-
-using Microsoft.SemanticKernel.Connectors.OpenAI;
-using Microsoft.AspNetCore.OpenApi;
-
-using System.ClientModel;
 using Microsoft.SemanticKernel.Agents;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI;
+using System.ClientModel;
 
-namespace ECommersAI.Services
+namespace ECommersAI.Features.AI.Agent
 {
-    public class ChatAIService : IChatAIService
+    public class AgentService : IAgentService
     {
         private const string SystemPrompt = """
 You are a smart Yemeni e-commerce assistant.
@@ -32,30 +28,30 @@ Rules:
 - If user refers to previous product, maintain context.
 """;
 
-        private readonly ChatAIOptions _chatAiOptions;
+        private readonly AgentAIOptions _chatAiOptions;
         private readonly InventoryPlugin _inventoryPlugin;
         private readonly PricingPlugin _pricingPlugin;
-        private readonly ApplicationDbContext _dbContext;
-        private readonly ILogger<ChatAIService> _logger;
+        private readonly IMessageService _messageService;
+        private readonly ILogger<AgentService> _logger;
 
-
-        public ChatAIService(
-            IOptions<ChatAIOptions> chatAiOptions,
+        public AgentService(
+            IOptions<AgentAIOptions> chatAiOptions,
             InventoryPlugin inventoryPlugin,
             PricingPlugin pricingPlugin,
-            ApplicationDbContext dbContext,
-            ILogger<ChatAIService> logger
-)
+            IMessageService messageService,
+            ILogger<AgentService> logger)
         {
             _chatAiOptions = chatAiOptions.Value;
             _inventoryPlugin = inventoryPlugin;
             _pricingPlugin = pricingPlugin;
-            _dbContext = dbContext;
-            _logger = logger;
+            _messageService = messageService;
 
+            _logger = logger;
         }
 
-        public async Task<string> ChatAsync(ChatRequestDto request, CancellationToken cancellationToken = default)
+
+
+        public async Task<string> SendAsync(MessageRequestDto request, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(request.Message))
             {
@@ -74,7 +70,6 @@ Rules:
                 var kernel = BuildKernel();
                 kernel.Plugins.AddFromObject(_inventoryPlugin, "InventoryPlugin");
                 kernel.Plugins.AddFromObject(_pricingPlugin, "PricingPlugin");
-                // _inventoryPlugin.
 
                 var history = await BuildHistoryAsync(request, cancellationToken);
                 var chatService = kernel.GetRequiredService<IChatCompletionService>();
@@ -84,20 +79,18 @@ Rules:
                     Temperature = 0.2,
                     MaxTokens = 400
                 };
-                var result = await chatService.GetChatMessageContentAsync(
-                                       history,
-                                       executionSettings,
-                                       kernel,
-                                       cancellationToken);
 
+                var result = await chatService.GetChatMessageContentAsync(
+                    history,
+                    executionSettings,
+                    kernel,
+                    cancellationToken);
 
                 return result.Content ?? "عذرا، لم أتمكن من توليد رد في الوقت الحالي.";
-
-
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "AI chat execution failed for trader {TraderId}, customer {CustomerPhone}", request.TraderId, request.CustomerPhone);
+                _logger.LogError(ex, "AI agent execution failed for trader {TraderId}, customer {CustomerPhone}", request.TraderId, request.CustomerPhone);
                 return "حدث خطأ مؤقت أثناء معالجة طلبك. حاول مرة أخرى بعد قليل.";
             }
         }
@@ -106,55 +99,27 @@ Rules:
         {
             var builder = Kernel.CreateBuilder();
 
-            var opnAIOption = new OpenAIClientOptions()
+            var openAiOptions = new OpenAIClientOptions
             {
-                Endpoint = new Uri(_chatAiOptions.BaseUrl),
+                Endpoint = new Uri(_chatAiOptions.BaseUrl)
             };
+
             var credentials = new ApiKeyCredential(_chatAiOptions.ApiKey);
-            var ghModelsClinet = new OpenAIClient(credentials, opnAIOption);
+            var modelClient = new OpenAIClient(credentials, openAiOptions);
 
             builder.AddOpenAIChatCompletion(
-            _chatAiOptions.Model,
-             ghModelsClinet
-               );
+                _chatAiOptions.Model,
+                modelClient);
 
             return builder.Build();
         }
 
-
-        private static bool IsRateLimitException(Exception ex)
-        {
-            if (ex is HttpOperationException operationException)
-            {
-                if (operationException.InnerException is HttpRequestException httpRequestException &&
-                    httpRequestException.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-                {
-                    return true;
-                }
-
-                if (operationException.Message.Contains("429", StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            return ex is HttpRequestException requestException &&
-                   requestException.StatusCode == System.Net.HttpStatusCode.TooManyRequests;
-        }
-
-        private async Task<ChatHistory> BuildHistoryAsync(ChatRequestDto request, CancellationToken cancellationToken)
+        private async Task<ChatHistory> BuildHistoryAsync(MessageRequestDto request, CancellationToken cancellationToken)
         {
             var history = new ChatHistory();
             history.AddSystemMessage(SystemPrompt);
 
-            var latestMessages = await _dbContext.Messages
-                .AsNoTracking()
-                .Where(m => m.TraderId == request.TraderId && m.CustomerPhone == request.CustomerPhone)
-                .OrderByDescending(m => m.CreatedAt)
-                .Take(8)
-                .OrderBy(m => m.CreatedAt)
-                .ToListAsync(cancellationToken);
-
+            var latestMessages = await _messageService.GetMessageHistoryAsync(request.TraderId, request.CustomerPhone, cancellationToken);
             foreach (var message in latestMessages)
             {
                 if (!string.IsNullOrWhiteSpace(message.Content))

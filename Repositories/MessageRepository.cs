@@ -4,10 +4,11 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using ECommersAI.Data;
 using ECommersAI.Models.Entities;
+using ECommersAI.Repositories.interfaces;
 
 namespace ECommersAI.Repositories
 {
-    public class MessageRepository : IRepository<Message>
+    public class MessageRepository : IMessageRepository
     {
         private readonly ApplicationDbContext _context;
         public MessageRepository(ApplicationDbContext context)
@@ -46,5 +47,16 @@ namespace ECommersAI.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+        public async Task<List<Message>> GetHistoryMessagesAsync(Guid TraderId, string CustomerPhone, CancellationToken cancellationToken)
+        {            return  await _context.Messages
+                .AsNoTracking()
+                .Where(m => m.TraderId == TraderId && m.CustomerPhone == CustomerPhone)
+                .OrderByDescending(m => m.CreatedAt)
+                .Take(8)
+                .OrderBy(m => m.CreatedAt)
+                .ToListAsync(cancellationToken);
+        }
+
+
     }
 }

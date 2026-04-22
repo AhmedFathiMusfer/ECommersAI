@@ -1,24 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using ECommersAI.Configurations.Options;
-using ECommersAI.Services.Interfaces;
+using ECommersAI.Features.AI.Options;
 using Microsoft.Extensions.Options;
 
-namespace ECommersAI.Services
+namespace ECommersAI.Features.AI.Embedding
 {
-    public class EmbeddingService : IAIService
+    public class EmbeddingService : IEmbeddingService
     {
         private readonly HttpClient _httpClient;
         private readonly EmbeddingAIOption _options;
-
         private readonly ILogger<EmbeddingService> _logger;
 
         public EmbeddingService(HttpClient httpClient, IOptions<EmbeddingAIOption> options, ILogger<EmbeddingService> logger)
@@ -26,17 +19,6 @@ namespace ECommersAI.Services
             _httpClient = httpClient;
             _options = options.Value;
             _logger = logger;
-        }
-
-        public Task<string> TranscribeVoiceAsync(string mediaUrl)
-        {
-            if (string.IsNullOrWhiteSpace(mediaUrl))
-            {
-                return Task.FromResult(string.Empty);
-            }
-
-            // MVP placeholder: wire WhatsApp media download + multipart upload to Gemini audio endpoint.
-            return Task.FromResult($"Transcribed voice from {mediaUrl}");
         }
 
         public async Task<float[]> GenerateEmbeddingAsync(string text)
@@ -72,52 +54,14 @@ namespace ECommersAI.Services
                 {
                     result[index++] = value.GetSingle();
                 }
+
                 return result;
             }
             catch (Exception ex)
             {
-                // Log the exception as needed. For now, we just return a deterministic embedding.
                 _logger.LogError(ex, "Error generating embedding for text: {Text}", text);
                 return BuildDeterministicEmbedding(text, _options.Dimensions > 0 ? _options.Dimensions : 1536);
             }
-
-
-        }
-
-        public async Task<string> GenerateReplyAsync(string prompt, IEnumerable<string> productHints)
-        {
-            var hints = string.Join("; ", productHints ?? Enumerable.Empty<string>());
-
-            if (string.IsNullOrWhiteSpace(_options.ApiKey))
-            {
-                return $"I found these products: {hints}. Replying to: {prompt}";
-            }
-
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{_options.BaseUrl.TrimEnd('/')}/chat/completions")
-            {
-                Content = JsonContent.Create(new
-                {
-                    model = _options.Model,
-                    messages = new object[]
-                    {
-                        new { role = "system", content = "You are an Arabic/English commerce assistant for Yemeni traders. Return concise product guidance with pricing." },
-                        new { role = "user", content = $"Customer prompt: {prompt}\nCandidate products: {hints}" }
-                    },
-                    temperature = 0.3
-                })
-            };
-
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
-            using var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-
-            using var stream = await response.Content.ReadAsStreamAsync();
-            using var json = await JsonDocument.ParseAsync(stream);
-            return json.RootElement
-                .GetProperty("choices")[0]
-                .GetProperty("message")
-                .GetProperty("content")
-                .GetString() ?? string.Empty;
         }
 
         private static float[] BuildDeterministicEmbedding(string input, int size)

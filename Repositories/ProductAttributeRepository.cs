@@ -4,10 +4,11 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using ECommersAI.Data;
 using ECommersAI.Models.Entities;
+using ECommersAI.Repositories.interfaces;
 
 namespace ECommersAI.Repositories
 {
-    public class ProductAttributeRepository : IRepository<ProductAttribute>
+    public class ProductAttributeRepository : IProductAttributeRepository
     {
         private readonly ApplicationDbContext _context;
         public ProductAttributeRepository(ApplicationDbContext context)
@@ -45,6 +46,13 @@ namespace ECommersAI.Repositories
                 _context.ProductAttributes.Remove(attr);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task<IEnumerable<ProductAttribute>> GetByProductIdAsync(Guid productId)
+        {
+            return await _context.ProductAttributes
+                .Where(a => a.ProductId == productId)
+                .ToListAsync();
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ECommersAI.DTOs.Product;
 using ECommersAI.Models.Entities;
 using ECommersAI.Repositories;
+using ECommersAI.Repositories.interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ECommersAI.Controllers
@@ -13,9 +14,9 @@ namespace ECommersAI.Controllers
     [Route("product-images")]
     public class ProductImagesController : ControllerBase
     {
-        private readonly IRepository<ProductImage> _productImageRepository;
+        private readonly IProductImageRepository _productImageRepository;
 
-        public ProductImagesController(IRepository<ProductImage> productImageRepository)
+        public ProductImagesController(IProductImageRepository productImageRepository)
         {
             _productImageRepository = productImageRepository;
         }

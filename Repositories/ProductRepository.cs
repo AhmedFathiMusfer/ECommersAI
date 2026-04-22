@@ -4,10 +4,11 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using ECommersAI.Data;
 using ECommersAI.Models.Entities;
+using ECommersAI.Repositories.interfaces;
 
 namespace ECommersAI.Repositories
 {
-    public class ProductRepository : IRepository<Product>
+    public class ProductRepository : IProductRepository
     {
         private readonly ApplicationDbContext _context;
         public ProductRepository(ApplicationDbContext context)
@@ -28,7 +29,7 @@ namespace ECommersAI.Repositories
             return await _context.Products
                 .Include(p => p.Images)
                 .Include(p => p.Attributes)
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id) ?? throw new KeyNotFoundException("Product not found");
         }
 
         public async Task AddAsync(Product entity)
@@ -51,6 +52,24 @@ namespace ECommersAI.Repositories
                 _context.Products.Remove(product);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task<IEnumerable<Product>> GetByTraderIdAsync(Guid traderId)
+        {
+            return await _context.Products
+                .Include(p => p.Images)
+                .Include(p => p.Attributes)
+                .Where(p => p.TraderId == traderId)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Product>> GetByCategoryAsync(Guid traderId, string category)
+        {
+            return await _context.Products
+                .Include(p => p.Images)
+                .Include(p => p.Attributes)
+                .Where(p => p.TraderId == traderId && p.Category.ToLower() == category.ToLower())
+                .ToListAsync();
         }
     }
 }

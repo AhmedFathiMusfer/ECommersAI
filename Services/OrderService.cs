@@ -6,22 +6,23 @@ using AutoMapper;
 using ECommersAI.DTOs.Order;
 using ECommersAI.Models.Entities;
 using ECommersAI.Repositories;
+using ECommersAI.Repositories.interfaces;
 using ECommersAI.Services.Interfaces;
 
 namespace ECommersAI.Services
 {
     public class OrderService : IOrderService
     {
-        private readonly IRepository<Order> _orderRepository;
-        private readonly IRepository<OrderItem> _orderItemRepository;
-        private readonly IRepository<Product> _productRepository;
+        private readonly IOrderRepository _orderRepository;
+        private readonly IOrderItemRepository _orderItemRepository;
+        private readonly IProductRepository _productRepository;
         private readonly IExchangeRateService _exchangeRateService;
         private readonly IMapper _mapper;
 
         public OrderService(
-            IRepository<Order> orderRepository,
-            IRepository<OrderItem> orderItemRepository,
-            IRepository<Product> productRepository,
+            IOrderRepository orderRepository,
+            IOrderItemRepository orderItemRepository,
+            IProductRepository productRepository,
             IExchangeRateService exchangeRateService,
             IMapper mapper)
         {

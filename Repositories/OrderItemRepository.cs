@@ -4,10 +4,11 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using ECommersAI.Data;
 using ECommersAI.Models.Entities;
+using ECommersAI.Repositories.interfaces;
 
 namespace ECommersAI.Repositories
 {
-    public class OrderItemRepository : IRepository<OrderItem>
+    public class OrderItemRepository : IOrderItemRepository
     {
         private readonly ApplicationDbContext _context;
         public OrderItemRepository(ApplicationDbContext context)
@@ -45,6 +46,13 @@ namespace ECommersAI.Repositories
                 _context.OrderItems.Remove(item);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task<IEnumerable<OrderItem>> GetByOrderIdAsync(Guid orderId)
+        {
+            return await _context.OrderItems
+                .Where(i => i.OrderId == orderId)
+                .ToListAsync();
         }
     }
 }

@@ -1,6 +1,9 @@
 using System.Threading;
 using System.Threading.Tasks;
 using ECommersAI.DTOs.AI;
+using ECommersAI.DTOs.Message;
+using ECommersAI.Features.AI.Agent;
+using ECommersAI.Features.AI.DTOs;
 using ECommersAI.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -11,12 +14,12 @@ namespace ECommersAI.Controllers
     [Route("api/ai")]
     public class AIController : ControllerBase
     {
-        private readonly IChatAIService _agentService;
+        private readonly IAgentService _agentService;
         private readonly IMessageService _messageService;
         private readonly ILogger<AIController> _logger;
 
         public AIController(
-            IChatAIService agentService,
+            IAgentService agentService,
             IMessageService messageService,
             ILogger<AIController> logger)
         {
@@ -26,7 +29,7 @@ namespace ECommersAI.Controllers
         }
 
         [HttpPost("chat")]
-        public async Task<ActionResult<ChatResponseDto>> Chat([FromBody] ChatRequestDto request, CancellationToken cancellationToken)
+        public async Task<ActionResult<ChatResponseDto>> Chat([FromBody] MessageRequestDto request, CancellationToken cancellationToken)
         {
             if (request.TraderId == System.Guid.Empty)
             {
@@ -45,7 +48,7 @@ namespace ECommersAI.Controllers
 
             try
             {
-                var responseText = await _agentService.ChatAsync(request, cancellationToken);
+                var responseText = await _agentService.SendAsync(request, cancellationToken);
 
                 await _messageService.CreateAsync(
                     request.TraderId,

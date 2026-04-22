@@ -4,10 +4,11 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using ECommersAI.Data;
 using ECommersAI.Models.Entities;
+using ECommersAI.Repositories.interfaces;
 
 namespace ECommersAI.Repositories
 {
-    public class TraderRepository : IRepository<Trader>
+    public class TraderRepository : ITraderRepository
     {
         private readonly ApplicationDbContext _context;
         public TraderRepository(ApplicationDbContext context)
@@ -45,6 +46,12 @@ namespace ECommersAI.Repositories
                 _context.Traders.Remove(trader);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task<Trader?> GetByWhatsAppIdAsync(string whatsAppId)
+        {
+            return await _context.Traders
+                .FirstOrDefaultAsync(t => t.WhatsAppId == whatsAppId);
         }
     }
 }

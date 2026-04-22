@@ -6,16 +6,17 @@ using AutoMapper;
 using ECommersAI.DTOs.Message;
 using ECommersAI.Models.Entities;
 using ECommersAI.Repositories;
+using ECommersAI.Repositories.interfaces;
 using ECommersAI.Services.Interfaces;
 
 namespace ECommersAI.Services
 {
     public class MessageService : IMessageService
     {
-        private readonly IRepository<Message> _messageRepository;
+        private readonly IMessageRepository _messageRepository;
         private readonly IMapper _mapper;
 
-        public MessageService(IRepository<Message> messageRepository, IMapper mapper)
+        public MessageService(IMessageRepository messageRepository, IMapper mapper)
         {
             _messageRepository = messageRepository;
             _mapper = mapper;
@@ -48,6 +49,16 @@ namespace ECommersAI.Services
 
             await _messageRepository.AddAsync(message);
             return message;
+        }
+        public async Task<List<MessageDto>> GetHistoryMessage()
+        {
+            var messages = await _messageRepository.GetAllAsync();
+            return messages.Select(m => _mapper.Map<MessageDto>(m)).ToList();
+        }
+
+        public async Task<List<Message>> GetMessageHistoryAsync(Guid traderId, string customerPhone, CancellationToken cancellationToken)
+        {
+            return await _messageRepository.GetHistoryMessagesAsync(traderId, customerPhone, cancellationToken);
         }
     }
 }

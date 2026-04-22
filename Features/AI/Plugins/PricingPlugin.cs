@@ -1,12 +1,8 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Threading.Tasks;
 using ECommersAI.Services.Interfaces;
-using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 
-namespace ECommersAI.Services.Plugins
+namespace ECommersAI.Features.AI.Plugins
 {
     public class PricingPlugin
     {

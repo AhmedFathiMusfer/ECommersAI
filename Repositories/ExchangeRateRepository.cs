@@ -4,10 +4,11 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using ECommersAI.Data;
 using ECommersAI.Models.Entities;
+using ECommersAI.Repositories.interfaces;
 
 namespace ECommersAI.Repositories
 {
-    public class ExchangeRateRepository : IRepository<ExchangeRate>
+    public class ExchangeRateRepository : IExchangeRateRepository
     {
         private readonly ApplicationDbContext _context;
         public ExchangeRateRepository(ApplicationDbContext context)
@@ -45,6 +46,14 @@ namespace ECommersAI.Repositories
                 _context.ExchangeRates.Remove(rate);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task<ExchangeRate?> GetLatestByCurrencyAsync(string currency)
+        {
+            return await _context.ExchangeRates
+                .Where(r => r.Currency.ToLower() == currency.ToLower())
+                .OrderByDescending(r => r.Date)
+                .FirstOrDefaultAsync();
         }
     }
 }

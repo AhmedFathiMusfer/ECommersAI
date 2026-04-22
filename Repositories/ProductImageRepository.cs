@@ -4,10 +4,11 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using ECommersAI.Data;
 using ECommersAI.Models.Entities;
+using ECommersAI.Repositories.interfaces;
 
 namespace ECommersAI.Repositories
 {
-    public class ProductImageRepository : IRepository<ProductImage>
+    public class ProductImageRepository : IProductImageRepository
     {
         private readonly ApplicationDbContext _context;
         public ProductImageRepository(ApplicationDbContext context)
@@ -45,6 +46,20 @@ namespace ECommersAI.Repositories
                 _context.ProductImages.Remove(image);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task<IEnumerable<ProductImage>> GetByProductIdAsync(Guid productId)
+        {
+            return await _context.ProductImages
+                .Where(i => i.ProductId == productId)
+                .ToListAsync();
+        }
+
+        public async Task<ProductImage?> GetMainByProductIdAsync(Guid productId)
+        {
+            return await _context.ProductImages
+                .Where(i => i.ProductId == productId && i.IsMain)
+                .FirstOrDefaultAsync();
         }
     }
 }

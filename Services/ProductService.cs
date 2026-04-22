@@ -4,8 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using ECommersAI.DTOs.Product;
+using ECommersAI.Features.AI.Embedding;
 using ECommersAI.Models.Entities;
 using ECommersAI.Repositories;
+using ECommersAI.Repositories.interfaces;
 using ECommersAI.Services.Interfaces;
 using Pgvector;
 
@@ -13,22 +15,22 @@ namespace ECommersAI.Services
 {
     public class ProductService : IProductService
     {
-        private readonly IRepository<Product> _productRepository;
-        private readonly IRepository<ProductVector> _productVectorRepository;
-        private readonly IAIService _aiService;
+        private readonly IProductRepository _productRepository;
+        private readonly IProductVectorRepository _productVectorRepository;
+        private readonly IEmbeddingService _embeddingService;
         private readonly IExchangeRateService _exchangeRateService;
         private readonly IMapper _mapper;
 
         public ProductService(
-            IRepository<Product> productRepository,
-            IRepository<ProductVector> productVectorRepository,
-            IAIService aiService,
+            IProductRepository productRepository,
+            IProductVectorRepository productVectorRepository,
+            IEmbeddingService embeddingService,
             IExchangeRateService exchangeRateService,
             IMapper mapper)
         {
             _productRepository = productRepository;
             _productVectorRepository = productVectorRepository;
-            _aiService = aiService;
+            _embeddingService = embeddingService;
             _exchangeRateService = exchangeRateService;
             _mapper = mapper;
         }
@@ -132,7 +134,7 @@ namespace ECommersAI.Services
 
         public async Task<List<ProductSearchResultDto>> SearchByQueryAsync(Guid traderId, string query, string currency, int topK = 5)
         {
-            var queryEmbedding = await _aiService.GenerateEmbeddingAsync(query);
+            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query);
             var vectors = await _productVectorRepository.GetAllAsync();
             var products = await _productRepository.GetAllAsync();
 
@@ -153,6 +155,7 @@ namespace ECommersAI.Services
             foreach (var row in scored)
             {
                 var convertedPrice = await _exchangeRateService.ConvertFromUsdAsync(row.Product.PriceUSD, currency);
+
                 results.Add(new ProductSearchResultDto
                 {
                     ProductId = row.Product.Id,
@@ -169,6 +172,33 @@ namespace ECommersAI.Services
             return results;
         }
 
+        public async Task<List<ProductSearchResultDto>> SearchByVectorQueryAsync(Guid traderId, string query, int topK = 5)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return new List<ProductSearchResultDto>();
+            }
+
+            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query);
+            var queryVector = new Vector(queryEmbedding);
+
+            var scored = _productVectorRepository.SearchNearestByTrader(traderId, queryVector).Select(row => new ProductSearchResultDto
+            {
+                ProductId = row.ProductId,
+                ProductName = row.Product.Name,
+                Description = row.Product.Description,
+                Category = row.Product.Category,
+                PriceUSD = row.Product.PriceUSD,
+                DisplayPrice = row.Product.PriceUSD,
+                Currency = "USD",
+                SimilarityScore = CosineSimilarity(queryEmbedding, row.Vector.ToArray())
+            })
+            .Take(topK)
+            .ToList();
+
+            return scored;
+        }
+
         public async Task UpsertProductVectorAsync(Guid productId)
         {
             var product = await _productRepository.GetByIdAsync(productId);
@@ -178,7 +208,7 @@ namespace ECommersAI.Services
             }
 
             var embeddingText = $"{product.Name}. {product.Description}. Category: {product.Category}";
-            var embedding = await _aiService.GenerateEmbeddingAsync(embeddingText);
+            var embedding = await _embeddingService.GenerateEmbeddingAsync(embeddingText);
 
             var existingVector = await _productVectorRepository.GetByIdAsync(productId);
             if (existingVector == null)

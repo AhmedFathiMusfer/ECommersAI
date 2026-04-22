@@ -19,16 +19,19 @@ namespace ECommersAI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Receive()
-
+        public async Task<IActionResult> Receive([FromBody] WhatsAppWebhookRequest request)
         {
-            var request = HttpContext;
-            //_logger.LogInformation("Received WhatsApp message: {Content} " );
-            //   await _whatsAppService.QueueIncomingMessageAsync(request);
+            if (request == null)
+            {
+                return BadRequest("Request body is required.");
+            }
+
+            _logger.LogInformation("Received WhatsApp message for trader {TraderId} from {CustomerPhone}.", request.TraderId, request.CustomerPhone);
+            await _whatsAppService.QueueIncomingMessageAsync(request);
             return Accepted(new { status = "queued" });
         }
         [HttpGet]
-        [Route("webhooks/verify")]
+        [Route("verify")]
         public IActionResult Verify(
     [FromQuery(Name = "hub.mode")] string mode,
     [FromQuery(Name = "hub.verify_token")] string token,

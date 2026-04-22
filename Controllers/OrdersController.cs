@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using ECommersAI.Actions;
 using ECommersAI.DTOs.Order;
 using ECommersAI.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -13,12 +12,12 @@ namespace ECommersAI.Controllers
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;
-        private readonly AutoGenerateOrderAction _autoGenerateOrderAction;
+        //  private readonly AutoGenerateOrderAction _autoGenerateOrderAction;
 
-        public OrdersController(IOrderService orderService, AutoGenerateOrderAction autoGenerateOrderAction)
+        public OrdersController(IOrderService orderService)
         {
             _orderService = orderService;
-            _autoGenerateOrderAction = autoGenerateOrderAction;
+
         }
 
         [HttpGet]
@@ -41,12 +40,12 @@ namespace ECommersAI.Controllers
             return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
         }
 
-        [HttpPost("auto-generate")]
-        public async Task<ActionResult<OrderDto>> AutoGenerate(AutoGenerateOrderRequest request)
-        {
-            var order = await _autoGenerateOrderAction.ExecuteAsync(request);
-            return Ok(order);
-        }
+        // [HttpPost("auto-generate")]
+        // public async Task<ActionResult<OrderDto>> AutoGenerate(AutoGenerateOrderRequest request)
+        // {
+        //     var order ='' ;//await _autoGenerateOrderAction.ExecuteAsync(request);
+        //     return Ok(order);
+        // }
 
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)

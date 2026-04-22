@@ -6,16 +6,17 @@ using AutoMapper;
 using ECommersAI.DTOs.Trader;
 using ECommersAI.Models.Entities;
 using ECommersAI.Repositories;
+using ECommersAI.Repositories.interfaces;
 using ECommersAI.Services.Interfaces;
 
 namespace ECommersAI.Services
 {
     public class TraderService : ITraderService
     {
-        private readonly IRepository<Trader> _traderRepository;
+        private readonly ITraderRepository _traderRepository;
         private readonly IMapper _mapper;
 
-        public TraderService(IRepository<Trader> traderRepository, IMapper mapper)
+        public TraderService(ITraderRepository traderRepository, IMapper mapper)
         {
             _traderRepository = traderRepository;
             _mapper = mapper;

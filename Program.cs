@@ -1,14 +1,21 @@
-using ECommersAI.Actions;
+
 using ECommersAI.Configurations;
 using ECommersAI.Configurations.Options;
 using ECommersAI.Data;
+using ECommersAI.Features.AI.Agent;
+using ECommersAI.Features.AI.Embedding;
+using ECommersAI.Features.AI.Options;
+using ECommersAI.Features.AI.Plugins;
 using ECommersAI.Models.Entities;
 using ECommersAI.Repositories;
+using ECommersAI.Repositories.interfaces;
 using ECommersAI.Services;
-using ECommersAI.Services.Background;
 using ECommersAI.Services.Interfaces;
-using ECommersAI.Services.Plugins;
+
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Pgvector.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,26 +24,44 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+
+// // 🔥 تسجيل pgvector داخل Npgsql
+// dataSourceBuilder.UseVector();
+
+//var dataSource = dataSourceBuilder.Build();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), o => o.UseVector()));
+    options.UseNpgsql(connectionString, options => options.UseVector()));
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-builder.Services.Configure<ChatAIOptions>(builder.Configuration.GetSection("ChatAI"));
+builder.Services.Configure<AgentAIOptions>(builder.Configuration.GetSection("AgentAI"));
 builder.Services.Configure<EmbeddingAIOption>(builder.Configuration.GetSection("EmbeddingAI"));
 
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection("WhatsApp"));
 
 
-builder.Services.AddScoped<IRepository<Trader>, TraderRepository>();
-builder.Services.AddScoped<IRepository<Product>, ProductRepository>();
-builder.Services.AddScoped<IRepository<Order>, OrderRepository>();
-builder.Services.AddScoped<IRepository<OrderItem>, OrderItemRepository>();
-builder.Services.AddScoped<IRepository<ProductImage>, ProductImageRepository>();
-builder.Services.AddScoped<IRepository<ProductAttribute>, ProductAttributeRepository>();
-builder.Services.AddScoped<IRepository<ExchangeRate>, ExchangeRateRepository>();
-builder.Services.AddScoped<IRepository<Message>, MessageRepository>();
-builder.Services.AddScoped<IRepository<ProductVector>, ProductVectorRepository>();
+
+builder.Services.AddHangfire(configuration => configuration
+    .UseRecommendedSerializerSettings()
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UsePostgreSqlStorage(options =>
+    {
+        options.UseNpgsqlConnection(connectionString);
+    }));
+builder.Services.AddHangfireServer();
+
+
+builder.Services.AddScoped<ITraderRepository, TraderRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderItemRepository, OrderItemRepository>();
+builder.Services.AddScoped<IProductImageRepository, ProductImageRepository>();
+builder.Services.AddScoped<IProductAttributeRepository, ProductAttributeRepository>();
+builder.Services.AddScoped<IExchangeRateRepository, ExchangeRateRepository>();
+builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+builder.Services.AddScoped<IProductVectorRepository, ProductVectorRepository>();
 
 builder.Services.AddScoped<ITraderService, TraderService>();
 builder.Services.AddScoped<IProductService, ProductService>();
@@ -44,17 +69,13 @@ builder.Services.AddScoped<IExchangeRateService, ExchangeRateService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
-builder.Services.AddScoped<IChatAIService, ChatAIService>();
+builder.Services.AddScoped<IAgentService, AgentService>();
 builder.Services.AddScoped<InventoryPlugin>();
 builder.Services.AddScoped<PricingPlugin>();
-builder.Services.AddScoped<IAIService, EmbeddingService>();
-builder.Services.AddScoped<AutoGenerateOrderAction>();
-builder.Services.AddHttpClient<IAIService, EmbeddingService>();
+builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
+
+builder.Services.AddHttpClient<IEmbeddingService, EmbeddingService>();
 //builder.Services.AddHttpClient<IAgentService, ChatAIService>();
-
-
-builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
-builder.Services.AddHostedService<WhatsAppMessageHostedService>();
 
 var app = builder.Build();
 
@@ -68,6 +89,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+//app.UseHangfireDashboard("/hangfire");
 
 app.MapControllers();
 
