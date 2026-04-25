@@ -1,0 +1,87 @@
+@host = http://localhost:5110
+@json = application/json
+
+### Health check
+GET {{host}}/
+
+### MCP: initialize session
+# Run this first in a new client session.
+POST {{host}}/mcp
+Content-Type: {{json}}
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": "init-1",
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "vscode-http-client",
+      "version": "1.0.0"
+    }
+  }
+}
+
+### MCP: notify initialized
+POST {{host}}/mcp
+Content-Type: {{json}}
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/initialized",
+  "params": {}
+}
+
+### MCP: list tools
+POST {{host}}/mcp
+Content-Type: {{json}}
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": "tools-list-1",
+  "method": "tools/list",
+  "params": {}
+}
+
+### MCP Tool: search_products
+POST {{host}}/mcp
+Content-Type: {{json}}
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": "tool-search-1",
+  "method": "tools/call",
+  "params": {
+    "name": "search_products",
+    "arguments": {
+      "query": "iphone"
+    }
+  }
+}
+
+### MCP Tool: get_product_price
+POST {{host}}/mcp
+Content-Type: {{json}}
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": "tool-price-1",
+  "method": "tools/call",
+  "params": {
+    "name": "get_product_price",
+    "arguments": {
+      "productName": "iPhone 15"
+    }
+  }
+}
+
+### Optional legacy SSE stream (enabled in Program.cs)
+# Keep this request open to observe server-sent events.
+GET {{host}}/sse
+Accept: text/event-stream
