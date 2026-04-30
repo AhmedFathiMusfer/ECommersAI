@@ -3,11 +3,11 @@ using ECommerce.Agent.Configurations.Options;
 using Hangfire;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel;
+
 
 [ApiController]
 [Route("api/whatsapp")]
-public class WhatsAppController(IBackgroundJobClient backgroundJobClient, IOptions<WhatsAppOptions> whatsAppOptions) : ControllerBase
+public class WhatsAppController(IBackgroundJobClient backgroundJobClient, IOptions<WhatsAppOptions> whatsAppOptions, ILogger<WhatsAppController> logger) : ControllerBase
 {
     private readonly WhatsAppOptions _whatsAppOptions = whatsAppOptions.Value;
 
@@ -22,20 +22,22 @@ public class WhatsAppController(IBackgroundJobClient backgroundJobClient, IOptio
 
 
     [HttpPost]
-    public IActionResult Receive([FromBody] dynamic data)
+    public IActionResult Receive([FromBody] WhatsAppWebhookDto data)
     {
         try
         {
-            var entry = data?.entry[0]?.changes[0]?.value;
-            var message = entry?.messages?[0];
+            var dataString = data?.ToString() ?? "null";
+            logger.LogInformation($"Received WhatsApp message:{dataString} ");
 
+            var message = data?.Data?.Messages;
             if (message != null)
             {
-                string phone = message.from;
-                string text = message.text?.body ?? " ";
+                var text = message.MessageBody ?? " ";
+                var sender = message.PushName;
+                var from = message.RemoteJid ?? " ";
 
 
-                backgroundJobClient.Enqueue<IAgentService>(s => s.ProcessAndReplyAsync(phone, text));
+                backgroundJobClient.Enqueue<IWatsAppService>(s => s.ProcessAndReplyAsync(from, text));
             }
         }
         catch { }
@@ -44,4 +46,49 @@ public class WhatsAppController(IBackgroundJobClient backgroundJobClient, IOptio
     }
 
 
+}
+public class WhatsAppWebhookDto
+{
+    public string? Event { get; set; }
+    public string? SessionId { get; set; }
+    public WhatsAppData? Data { get; set; }
+    public long Timestamp { get; set; }
+}
+
+public class WhatsAppData
+{
+    public WhatsAppMessageWrapper? Messages { get; set; }
+}
+
+public class WhatsAppMessageWrapper
+{
+    public WhatsAppKey? Key { get; set; }
+    public long MessageTimestamp { get; set; }
+    public string? PushName { get; set; }
+    public bool Broadcast { get; set; }
+    public WhatsAppMessage? Message { get; set; }
+    public string? MessageBody { get; set; }
+    public string? RemoteJid { get; set; }
+    public string? Id { get; set; }
+}
+
+public class WhatsAppKey
+{
+    public string? Id { get; set; }
+    public bool FromMe { get; set; }
+    public string? RemoteJid { get; set; }
+    public string? SenderPn { get; set; }
+    public string? CleanedSenderPn { get; set; }
+    public string? SenderLid { get; set; }
+    public string? AddressingMode { get; set; }
+}
+
+public class WhatsAppMessage
+{
+    public ExtendedTextMessage? ExtendedTextMessage { get; set; }
+}
+
+public class ExtendedTextMessage
+{
+    public string? Text { get; set; }
 }

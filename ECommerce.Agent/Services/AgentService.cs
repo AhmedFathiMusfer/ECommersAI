@@ -4,42 +4,38 @@ using ECommerce.Agent.Configurations.Options;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using ModelContextProtocol.Client;
+using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace ECommerce.Agent.Services;
 
-public class AgentService(Kernel kernel, HttpClient httpClient, IOptions<WhatsAppOptions> whatsAppOptions) : IAgentService
+public class AgentService(Kernel kernel, Task<McpClient> mcpClient, IOptions<ChatOptions> chatOptions) : IAgentService
 {
-    private readonly WhatsAppOptions _whatsAppOptions = whatsAppOptions.Value;
-
-    public async Task ProcessAndReplyAsync(string phone, string text)
+    public async Task<string> AgentChat(string message)
     {
-        // 1. إعدادات الـ AI للتعامل مع أدوات الـ MCP تلقائياً
+        var mcp = await mcpClient;
+        var tools = await mcp.ListToolsAsync();
+
+        kernel.Plugins.AddFromFunctions("MCP_Server", tools.Select(aiFunction => aiFunction.AsKernelFunction()));
+        var history = new ChatHistory();
+        history.AddSystemMessage(chatOptions.Value.SystemPrompt);
+        history.AddUserMessage(message.Trim());
+
+        var chatService = kernel.GetRequiredService<IChatCompletionService>();
         var settings = new OpenAIPromptExecutionSettings
         {
             ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
         };
 
-        // 2. معالجة الطلب (قد يستغرق وقت، هانج فاير سيتولى الأمر)
-        var result = await kernel.InvokePromptAsync(text, new(settings));
-
-        // 3. إرسال الرد النهائي لواتساب
-        await SendToMetaAsync(phone, result.ToString());
+        var result = await chatService.GetChatMessageContentAsync(
+                    history,
+                    settings,
+                    kernel,
+                    CancellationToken.None);
+        return result.Content ?? String.Empty;
     }
 
-    private async Task SendToMetaAsync(string to, string message)
-    {
-        var url = $"{_whatsAppOptions.GraphBaseUrl}/{_whatsAppOptions.ApiVersion}/{_whatsAppOptions.PhoneNumberId}/messages";
-        var payload = new
-        {
-            messaging_product = _whatsAppOptions.MessagingProduct,
-            to = to,
-            type = "text",
-            text = new { body = message }
-        };
 
-        httpClient.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _whatsAppOptions.AccessToken);
 
-        await httpClient.PostAsJsonAsync(url, payload);
-    }
+
 }

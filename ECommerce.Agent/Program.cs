@@ -23,13 +23,6 @@ builder.Services.AddHangfire(config => config.UseMemoryStorage());
 builder.Services.AddHangfireServer();
 builder.Services.AddHttpClient<AgentService>();
 
-// var clinetTransport = new HttpClientTransport(new HttpClientTransportOptions
-// {
-//     Name = "MCP-Server",
-//     Endpoint = new Uri("http://localhost:5110/mcp")
-// });
-// var mcpClient = await McpClient.CreateAsync(clinetTransport);
-// var tools = await mcpClient.ListToolsAsync().ConfigureAwait(false);
 builder.Services.AddTransient<Task<McpClient>>(sp =>
 {
     var mcpOptions = sp.GetRequiredService<IOptions<McpOptions>>().Value;
