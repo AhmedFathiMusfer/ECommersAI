@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace ECommerce.Agent.Services
 {
-    public class WatsAppService(IAgentService agentService, HttpClient httpClient, IOptions<WhatsAppOptions> whatsAppOptions) : IWatsAppService
+    public class WhatsAppService(IAgentService agentService, HttpClient httpClient, IOptions<WhatsAppOptions> whatsAppOptions) : IWhatsAppService
     {
         public async Task ProcessAndReplyAsync(string phone, string text)
         {

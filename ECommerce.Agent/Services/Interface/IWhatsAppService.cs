@@ -2,7 +2,7 @@
 
 namespace ECommerce.Agent.Services.Interface
 {
-    public interface IWatsAppService
+    public interface IWhatsAppService
     {
         Task ProcessAndReplyAsync(string phone, string text);
     }

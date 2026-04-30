@@ -54,6 +54,8 @@ builder.Services.AddScoped(sp =>
     return kernelBuilder.Build();
 });
 builder.Services.AddScoped<IAgentService, AgentService>();
+builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
