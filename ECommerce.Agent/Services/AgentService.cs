@@ -32,6 +32,7 @@ public class AgentService(Kernel kernel, Task<McpClient> mcpClient, IOptions<Cha
                     settings,
                     kernel,
                     CancellationToken.None);
+
         return result.Content ?? String.Empty;
     }
 

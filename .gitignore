@@ -17,6 +17,7 @@ obj/
 *.pdb
 *.cache
 *.log
+*.lscache
 
 # NuGet
 *.nupkg
